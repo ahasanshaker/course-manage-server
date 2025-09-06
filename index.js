@@ -27,7 +27,8 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    const courseCollection=client.db("courseManage").collection('courses')
+    const courseCollection=client.db("courseManage").collection('courses');
+    const enrollmentCollection= client.db('courseManage').collection('enrolls');
 
     // Courses api
     app.get('/courses', async(req,res)=>{
@@ -43,6 +44,12 @@ async function run() {
         res.send(result)
     })
 
+    // Enrollment related api
+    app.post('/enrolls', async(req,res)=>{
+        const enroll =req.body;
+        const result =await enrollmentCollection.insertOne();
+        res.send(result);
+    })
      
 
     // Send a ping to confirm a successful connection
