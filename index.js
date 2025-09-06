@@ -1,71 +1,117 @@
-const express = require('express')
+// server.js
+const express = require('express');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const cors = require('cors');
+require('dotenv').config();
 
-const cors = require('cors')
-const app = express()
-const port = 3000
-require('dotenv').config()
+const app = express();
+const port = 3000;
 
-
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-
-
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.byszxkc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+// MongoDB Connection
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.byszxkc.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    const courseCollection=client.db("courseManage").collection('courses');
-    const enrollmentCollection= client.db('courseManage').collection('enrolls');
+    const courseCollection = client.db("courseManage").collection("courses");
+    const enrollmentCollection = client.db("courseManage").collection("enrolls");
 
-    // Courses api
-    app.get('/courses', async(req,res)=>{
-        const cursor = courseCollection.find();
-        const result = await cursor.toArray();
-        res.send(result);
-    })
+    // ================== Courses API ==================
+    // Get all courses
+    app.get("/courses", async (req, res) => {
+      const courses = await courseCollection.find().toArray();
+      res.send(courses);
+    });
 
-    app.get('/courses/:id', async(req,res)=>{
-        const id= req.params.id;
-        const query ={_id: new ObjectId (id)}
-        const result = await courseCollection.findOne(query);
-        res.send(result)
-    })
+    // Get single course by ID
+    app.get("/courses/:id", async (req, res) => {
+      const id = req.params.id;
+      const course = await courseCollection.findOne({ _id: new ObjectId(id) });
+      res.send(course);
+    });
 
-    // Enrollment related api
-    app.post('/enrolls', async(req,res)=>{
-        const enroll =req.body;
-        const result =await enrollmentCollection.insertOne();
-        res.send(result);
-    })
-     
+    // Add new course
+    app.post("/courses", async (req, res) => {
+      const { title, description, instructor, duration, price, image } = req.body;
 
-    // Send a ping to confirm a successful connection
+      if (!title || !description || !instructor || !duration || !price || !image) {
+        return res.status(400).send({ error: "All fields are required" });
+      }
+
+      const result = await courseCollection.insertOne(req.body);
+      res.send(result); // returns insertedId
+    });
+
+    // ================== Enrollment API ==================
+    // Add enrollment
+    app.post("/enrolls", async (req, res) => {
+      const enroll = req.body;
+      const result = await enrollmentCollection.insertOne(enroll);
+      res.send(result);
+    });
+
+    // Get all enrollments (optional filter by email)
+    app.get("/enrolls", async (req, res) => {
+      const email = req.query.email;
+      let query = {};
+      if (email) query.email = email;
+
+      const enrollments = await enrollmentCollection.find(query).toArray();
+      res.send(enrollments);
+    });
+
+    // Get user-specific enrollments with full course details
+    app.get("/my-enrolls", async (req, res) => {
+      const email = req.query.email;
+      if (!email) return res.status(400).send({ error: "Email query is required" });
+
+      const enrollments = await enrollmentCollection.find({ email }).toArray();
+
+      const detailedEnrollments = await Promise.all(
+        enrollments.map(async (enroll) => {
+          const course = await courseCollection.findOne({ _id: new ObjectId(enroll.courseId) });
+          return {
+            ...enroll,
+            courseTitle: course?.title,
+            courseDescription: course?.description,
+            instructor: course?.instructor,
+            duration: course?.duration,
+            price: course?.price,
+            courseImage: course?.image,
+          };
+        })
+      );
+
+      res.send(detailedEnrollments);
+    });
+
+    // Ping MongoDB
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log("Connected to MongoDB successfully!");
   } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+    // Do not close client
   }
 }
+
 run().catch(console.dir);
 
-app.get('/', (req, res) => {
-  res.send('course code cooking!')
-})
+// Test route
+app.get("/", (req, res) => {
+  res.send("Course management server is running!");
+});
 
+// Start server
 app.listen(port, () => {
-  console.log(`course code is running on port ${port}`)
-})
+  console.log(`Server is running on port ${port}`);
+});
