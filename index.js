@@ -1,15 +1,17 @@
+require('dotenv').config();
+
+
 // server.js
 const express = require('express');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
 const port = 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); 
 
 // MongoDB Connection
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.byszxkc.mongodb.net/?retryWrites=true&w=majority`;
@@ -97,7 +99,7 @@ async function run() {
     });
 
     // Ping MongoDB
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Connected to MongoDB successfully!");
   } finally {
     // Do not close client
