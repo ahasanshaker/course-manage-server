@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 
-// server.js
+// server.js 
 const express = require('express');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
@@ -29,7 +29,7 @@ async function run() {
     const courseCollection = client.db("courseManage").collection("courses");
     const enrollmentCollection = client.db("courseManage").collection("enrolls");
 
-    // ================== Courses API ==================
+   
     // Get all courses
     app.get("/courses", async (req, res) => {
       const courses = await courseCollection.find().toArray();
